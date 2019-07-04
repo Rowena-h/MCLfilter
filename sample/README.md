@@ -1,4 +1,4 @@
-The four fasta files used in this example are from [Mycocosm](https://genome.jgi.doe.gov/mycocosm/home):
+The four fasta files used in this sample analysis are from [Mycocosm](https://genome.jgi.doe.gov/mycocosm/home):
 
 1. [*Fusarium fujikuroi*](https://genome.jgi.doe.gov/Fusfu1/Fusfu1.home.html)
 2. [*Fusarium pseudograminearum*](https://genome.jgi.doe.gov/Fusps1/Fusps1.home.html)
