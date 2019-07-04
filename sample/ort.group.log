@@ -1,0 +1,15 @@
+Thu  4 Jul 14:56:43 UTC 2019
+-------------------------------------------------
+Starting ./MCLfilter
+-------------------------------------------------
+Filtering for genes in at least 4 out of 4 genomes
+Extracting single-copy clusters
+2414 orthologous gene clusters printed in sample/ort.group_ort_lists/
+Linearising genome fasta files
+Preparing fasta files for orthologous clusters in sample/ort.group_ort_aln/ (can take a while)
+Filtering by minimum sequence length of 180 (can take a while)
+Removed 2441 sequences
+1700 orthologous clusters after filtering
+-------------------------------------------------
+Finished Thu  4 Jul 14:58:54 UTC 2019
+-------------------------------------------------

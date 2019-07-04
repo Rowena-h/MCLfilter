@@ -1,0 +1,213 @@
+#!/bin/bash
+#Script to convert MCL output to a set of filtered orthologous clusters ready for alignment
+
+display_usage() {
+	echo ""
+	echo "USAGE: $0 [OPTIONS]"
+    echo ""
+	echo "OPTIONS"
+	echo "  -i, --input"
+    echo "      an MCL output file containing clusters of gene names"
+	echo "  -t, --taxa"
+    echo "      a list of the taxon names of the clustered genes (must be a unique genome identifier in the gene names)"
+    echo "  -m, --minimum"
+    echo "      minimum number of genomes with representatives of an orthologous gene to include (must not exceed total number of genomes)"
+    echo "  -f, --fasta"
+    echo "      directory of corresponding fasta files to create individual fasta files of clusters"
+    echo "  -l, --length"
+    echo "      minimum sequence length, default 180"
+    echo ""
+    echo "EXAMPLE"
+	echo "  $0 -i out.small.mci.I3 -t taxon_list -m 15 -f /path/to/genomes/"
+    echo ""
+    exit
+}
+
+if [ -z "$1" ]
+then
+    display_usage
+    exit
+fi
+
+while [ "$#" -gt 0 ]
+do
+    ARGUMENTS="$1"
+    case $ARGUMENTS in
+        -h|--help)
+        display_usage
+        ;;
+        -i|--input)
+        INPUT="$2"
+        shift
+        ;;
+        -t|--taxa)
+        TAXON_LIST="$2"
+        shift
+        ;;
+        -m|--minimum)
+        MINIMUM="$2"
+        shift
+        ;;
+        -f|--fasta)
+        FASTADIR="$2"
+        shift
+        ;;
+        -l|--length)
+        LENGTH="$2"
+        shift
+        ;;
+    esac
+    shift
+done
+
+if [ -z "$INPUT" ] || [ -z "$TAXON_LIST" ] || [ -z "$MINIMUM"  ] || [ -z "$FASTADIR" ]
+then
+    echo "Missing required options"
+    display_usage
+    echo "Exiting..."
+    exit
+fi
+
+GENOME_TOTAL=$(cat $TAXON_LIST | wc -l)
+GENOME_NO=$(awk '{print FNR}' $TAXON_LIST)
+ID=$(cat $TAXON_LIST)
+LENGTH="${LENGTH:=180}"
+
+if [ "$MINIMUM" -gt "$GENOME_TOTAL" ]
+then
+    echo "Invalid -m argument of $MINIMUM: minimum number of genomes with representatives of an orthologous gene must not exceed the total number of genomes, $GENOME_TOTAL" | tee error.txt
+    echo "Exiting..."
+    exit
+fi
+
+echo "`date -u`" | tee ${INPUT}.log
+echo "-------------------------------------------------" | tee -a ${INPUT}.log
+echo "Starting $0" | tee -a ${INPUT}.log
+echo "-------------------------------------------------" | tee -a ${INPUT}.log
+echo "Filtering for genes in at least $MINIMUM out of $GENOME_TOTAL genomes" | tee -a ${INPUT}.log
+
+#print genes for the minimum number of genomes with orthologous genes
+awk -v min="$MINIMUM" -v max="$GENOME_TOTAL" 'NF<=max && NF>=min' $INPUT > single_copy_ort
+
+#loop across each taxon
+for i in $ID
+do
+    #print copy numbers of gene in cluster
+    awk -F"$i" 'NF{print NF-1}' single_copy_ort > copies
+    #print line number of multiple copy clusters
+    awk '{if($1 > 1) print FNR}' copies >> rownumbers
+done
+
+rm copies
+
+#sort unique multi-copy row numbers from largest to smallest
+sort -n -r -k1 rownumbers | uniq > rownumberstmp && mv rownumberstmp rownumbers
+
+echo 'Extracting single-copy clusters' | tee -a ${INPUT}.log
+
+#extract single copy clusters
+for row in `cat rownumbers`
+do
+    #print single-copy rows
+    sed -i -n "${row}!p" single_copy_ort
+done
+
+rm rownumbers
+
+#make new directory for lists of orthologues
+mkdir ${INPUT}_ort_lists
+
+cp single_copy_ort ${INPUT}_ort_lists/all_ort_clusters
+rm single_copy_ort
+
+#split orthologous clusters into separate files
+split -l 1 -d ${INPUT}_ort_lists/all_ort_clusters ${INPUT}_ort_lists/ort_
+
+echo "`ls -1 ${INPUT}_ort_lists/ort_* | wc -l` orthologous gene clusters printed in ${INPUT}_ort_lists/" | tee -a ${INPUT}.log
+
+#make a new directory for the aligned orthologue clusters
+mkdir ${INPUT}_ort_aln
+
+echo 'Linearising genome fasta files' | tee -a ${INPUT}.log
+
+#remove linebreaks and put fasta on same line with space after header
+for file in $(ls -1 $FASTADIR)
+do
+    cat "${FASTADIR}${file}" | awk 'NR==1{printf $0"\t";next}{printf /^>/ ? "\n"$0"\t" : $0}' > ${FASTADIR}${file}.linearised
+done
+
+echo "Preparing fasta files for orthologous clusters in ${INPUT}_ort_aln/ (can take a while)" | tee -a ${INPUT}.log
+
+#make linearised fasta files for orthologous clusters
+for file in ${INPUT}_ort_lists/ort_*
+do
+    #move each gene in cluster files to separate line
+    cat "$file" | sed 's/\s/\n/g' > tmp && mv tmp "$file"
+    #remove empty lines
+    cat "$file" | sed '/^$/d' > tmp && mv tmp "$file"
+
+    #loop through each line of cluster file
+    for line in $(cat $file)
+    do
+        GENOME=$(echo "$line" | sed -e 's#|.*\(\)#\1#')
+        GENE=$(echo "$line" | sed -e 's#.*|\(\)#\1#')
+        NO=$(echo "$file" | sed -e 's#.*_\(\)#\1#')
+        #extract gene from each genome file
+        grep -w "$GENE" ${FASTADIR}${GENOME}*linearised >> "${INPUT}_ort_aln/ort_${NO}.fa" 
+    done
+
+done
+
+echo "Filtering by minimum sequence length of $LENGTH (can take a while)" | tee -a ${INPUT}.log
+
+#create variable to count how many sequences are removed by filtering (across all files)
+REMOVED_TOTAL=0
+
+#loop through each cluster file
+for file in ${INPUT}_ort_aln/ort_*
+do
+
+    #create variable to count number of removed sequences in this file
+    REMOVED_INFILE=0
+
+    #loop through each line of cluster file
+    for line in $GENOME_NO
+    do
+ 
+        #remove sequence if sequence length is less than chosen value
+        read -r name sequence <<<  `cat $file | sed -n "${line}p"`
+
+        if [ "${#sequence}" -lt "$LENGTH" ]
+        then
+            sed -i -e "${line}s/\t.*//" "$file"
+            #add 1 to counts
+            REMOVED_TOTAL=$((REMOVED_TOTAL+1))
+            REMOVED_INFILE=$((REMOVED_INFILE+1))
+        fi
+
+    done
+
+    #remove cluster if number of filtered sequences is less than the minimum required
+    if [ "$REMOVED_INFILE" -gt `expr "$GENOME_TOTAL" - "$MINIMUM"` ]
+    then
+        rm $file
+    fi
+
+done
+
+echo "Removed $REMOVED_TOTAL sequences" | tee -a ${INPUT}.log
+
+echo "`ls -1 ${INPUT}_ort_aln/ort_* | wc -l` orthologous clusters after filtering" | tee -a ${INPUT}.log
+
+#move sequence to line after name (delinearise)
+for file in $(ls -1 ${INPUT}_ort_aln | sed -e "s#^#${INPUT}_ort_aln/#")
+do
+    sed -i 's/[\t][\t]*/\n/g' "$file"
+done
+
+#remove linearised genomes
+rm ${FASTADIR}*linearised
+
+echo '-------------------------------------------------' | tee -a ${INPUT}.log
+echo "Finished `date -u`" | tee -a ${INPUT}.log
+echo '-------------------------------------------------' | tee -a ${INPUT}.log
