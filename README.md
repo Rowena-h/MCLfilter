@@ -23,7 +23,7 @@ Option | Description
 -h, --help | Display these options
 -i, --input | An MCL output file containing clusters of gene names on one line, separated by tabs
 -t, --taxa | A file containing a list of the taxon names used in the orthologue clustering
--m, --min | Minimum number of taxa required in a cluster i.e. amount of missing data allowed (must not exceed total number of genomes)
+-m, --minimum | Minimum number of taxa required in a cluster i.e. amount of missing data allowed (must not exceed total number of genomes)
 -f, --fasta | Directory of fasta files from which orthologues were clustered
 -l, --length | Minimum sequence length, default 180
 
