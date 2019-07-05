@@ -5,4 +5,4 @@ The four fasta files used in this sample analysis are from [Mycocosm](https://ge
 3. [*Fusarium verticillioides*](https://genome.jgi.doe.gov/Fusve2/Fusve2.home.html)
 4. [*Fusarium oxysporum* f. sp. lycopersici](https://genome.jgi.doe.gov/Fusox2/Fusox2.home.html)
 
-The orthologue cluster file was generated using [**PorthoMCL**](https://github.com/etabari/PorthoMCL) [(Tabari & Su, 2017)](https://doi.org/10.1186/s41044-016-0019-8)
+The orthologue cluster file was generated using [**PorthoMCL**](https://github.com/etabari/PorthoMCL) [(Tabari & Su, 2017)](https://doi.org/10.1186/s41044-016-0019-8).
