@@ -20,7 +20,7 @@ display_usage() {
     echo "      minimum sequence length, default 180"
     echo ""
     echo "EXAMPLE"
-    echo "  $0 -i ort.group -t taxon_list -m 4 -f /sample/fasta_files/"
+    echo "  $0 -i ort.group -t taxon_list -m 4 -f fasta_files/"
     echo ""
     exit
 }
