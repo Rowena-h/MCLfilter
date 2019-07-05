@@ -30,7 +30,7 @@ Option | Description
 ### Example
 
 ```
-./MCLfilter -i ort.group -t taxon_list -m 4 -f /sample/fasta_files/
+./MCLfilter -i ort.group -t taxon_list -m 4 -f fasta_files/
 ```
 
 To see an example run, refer to the [sample](https://github.com/Rowena-h/MCLfilter/tree/master/sample) directory.
