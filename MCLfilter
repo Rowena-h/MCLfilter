@@ -28,7 +28,6 @@ display_usage() {
 if [ -z "$1" ]
 then
     display_usage
-    exit
 fi
 
 while [ "$#" -gt 0 ]
@@ -66,8 +65,6 @@ if [ -z "$INPUT" ] || [ -z "$TAXON_LIST" ] || [ -z "$MINIMUM"  ] || [ -z "$FASTA
 then
     echo "Missing required options"
     display_usage
-    echo "Exiting..."
-    exit
 fi
 
 GENOME_TOTAL=$(cat $TAXON_LIST | wc -l)
